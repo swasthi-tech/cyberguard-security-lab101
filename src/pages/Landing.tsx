@@ -11,15 +11,6 @@ const tools = [
   {
     id: 1,
     label: '01',
-    icon: <Network size={28} />,
-    title: 'Network Port Scanner',
-    desc: 'Simulated port scanning with radar visualization and risk assessment.',
-    color: '#00f5ff',
-    path: '/tools/port-scanner',
-  },
-  {
-    id: 2,
-    label: '02',
     icon: <Globe size={28} />,
     title: 'IP Address Information',
     desc: 'Analyze IP geolocation, ASN, reputation, and risk scores.',
@@ -27,8 +18,8 @@ const tools = [
     path: '/tools/ip-information',
   },
   {
-    id: 3,
-    label: '03',
+    id: 2,
+    label: '02',
     icon: <Link2 size={28} />,
     title: 'URL Safety Checker',
     desc: 'Evaluate URL safety with multi-factor indicator analysis.',
@@ -36,8 +27,8 @@ const tools = [
     path: '/tools/url-safety',
   },
   {
-    id: 4,
-    label: '04',
+    id: 3,
+    label: '03',
     icon: <Fish size={28} />,
     title: 'Phishing Detector',
     desc: 'Machine-learning inspired phishing probability analysis.',
@@ -45,8 +36,8 @@ const tools = [
     path: '/tools/phishing-detector',
   },
   {
-    id: 5,
-    label: '05',
+    id: 4,
+    label: '04',
     icon: <Flame size={28} />,
     title: 'Firewall Simulator',
     desc: 'Animated firewall rule engine with real-time packet flow.',
@@ -54,23 +45,15 @@ const tools = [
     path: '/tools/firewall',
   },
   {
-    id: 6,
-    label: '06',
+    id: 5,
+    label: '05',
     icon: <Bug size={28} />,
     title: 'Malware Scanner',
     desc: 'Signature-based educational malware scanning simulation.',
     color: '#10b981',
     path: '/tools/malware-scanner',
   },
-  {
-    id: 7,
-    label: '07',
-    icon: <Globe2 size={28} />,
-    title: 'Website Security Scanner',
-    desc: 'Comprehensive security header and configuration analysis.',
-    color: '#ec4899',
-    path: '/tools/website-scanner',
-  },
+
 ];
 
 export function LandingPage() {
@@ -138,7 +121,7 @@ export function LandingPage() {
         {/* Stats */}
         <div className="flex flex-wrap gap-8 justify-center text-center">
           {[
-            { label: 'Security Tools', value: '7' },
+            { label: 'Security Tools', value: '5' },
             { label: 'Threat Signatures', value: '500+' },
             { label: 'Scan Checks', value: '50+' },
             { label: 'Uptime', value: '99.9%' },
@@ -156,7 +139,7 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="font-cyber text-3xl font-bold text-white mb-3">Security Tools Suite</h2>
-            <p className="text-slate-400">Seven professional-grade cybersecurity applications in one platform</p>
+            <p className="text-slate-400">Five professional-grade cybersecurity applications in one platform</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

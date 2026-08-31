@@ -83,7 +83,7 @@ export function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             {/* Full Name */}
             <Input
               id="fullName"

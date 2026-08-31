@@ -3,51 +3,33 @@ import { Globe, Search } from 'lucide-react';
 import { Button, SimBanner, SectionHeader } from '../../components/ui';
 import { SecurityGauge, GlobeVisualization } from '../../components/security';
 
-const IP_DATABASE: Record<string, any> = {
-  '8.8.8.8': {
-    country: 'United States', countryCode: 'US', region: 'California',
-    city: 'Mountain View', isp: 'Google LLC', asn: 'AS15169',
-    organization: 'Google Cloud', timezone: 'America/Los_Angeles',
-    latitude: 37.4056, longitude: -122.0775, riskScore: 5, reputationScore: 98,
-    isVPN: false, isProxy: false, isTor: false,
-  },
-  '1.1.1.1': {
-    country: 'Australia', countryCode: 'AU', region: 'Queensland',
-    city: 'Brisbane', isp: 'Cloudflare, Inc.', asn: 'AS13335',
-    organization: 'Cloudflare', timezone: 'Australia/Brisbane',
-    latitude: -27.4767, longitude: 153.0270, riskScore: 3, reputationScore: 99,
-    isVPN: false, isProxy: false, isTor: false,
-  },
-  '185.220.101.5': {
-    country: 'Germany', countryCode: 'DE', region: 'Bavaria',
-    city: 'Munich', isp: 'Tor Exit Node', asn: 'AS60729',
-    organization: 'CyberGhost (demo)', timezone: 'Europe/Berlin',
-    latitude: 48.1351, longitude: 11.5820, riskScore: 88, reputationScore: 12,
-    isVPN: true, isProxy: false, isTor: true,
-  },
-};
-
-const DEFAULT_IP_INFO = (ip: string) => ({
-  country: 'Unknown', countryCode: 'XX', region: 'Unknown', city: 'Unknown',
-  isp: 'Demo ISP', asn: 'AS00000', organization: 'CyberGuard Demo',
-  timezone: 'UTC', latitude: 0, longitude: 0, riskScore: Math.floor(Math.random() * 40 + 5),
-  reputationScore: Math.floor(Math.random() * 40 + 50),
-  isVPN: false, isProxy: false, isTor: false,
-});
 
 export function IPInfoPage() {
   const [ipInput, setIpInput] = useState('8.8.8.8');
   const [info, setInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const analyze = async () => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 1200));
-    const found = IP_DATABASE[ipInput.trim()];
-    setInfo({ ip: ipInput.trim(), ...(found || DEFAULT_IP_INFO(ipInput.trim())) });
-    setLoading(false);
-  };
+  const [error, setError] = useState<string | null>(null);
 
+  const analyze = async () => {
+    if (!ipInput.trim()) return;
+    setLoading(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const res = await fetch(`${baseUrl}/api/ip/${ipInput.trim()}`);
+      if (!res.ok) {
+        throw new Error('API Error');
+      }
+      const data = await res.json();
+      setInfo(data);
+    } catch (err) {
+      setError('IP INFORMATION SERVICE NOT CONFIGURED');
+    } finally {
+      setLoading(false);
+    }
+  };
   const InfoRow = ({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) => (
     <div className="flex items-center justify-between py-2.5 border-b border-slate-700/30 last:border-0">
       <span className="text-xs font-cyber text-slate-500 tracking-widest uppercase">{label}</span>
@@ -66,7 +48,7 @@ export function IPInfoPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <SectionHeader title="IP Address Information" icon={<Globe size={22} />} subtitle="Analyze IP reputation, geolocation, and threat indicators" />
-      <SimBanner message="Geolocation and threat data is simulated. Try: 8.8.8.8, 1.1.1.1, 185.220.101.5" />
+      <SimBanner message="Connected to Real API. If backend is not running, it will show as Not Configured." />
 
       {/* Input */}
       <div className="glass-card p-5">
@@ -79,7 +61,7 @@ export function IPInfoPage() {
             onKeyDown={e => e.key === 'Enter' && analyze()}
           />
           <Button variant="primary" onClick={analyze} loading={loading} icon={<Search size={16} />}>
-            Analyze IP
+            {loading ? 'ANALYZING...' : 'Analyze IP'}
           </Button>
         </div>
       </div>
@@ -131,11 +113,18 @@ export function IPInfoPage() {
         </div>
       )}
 
-      {!info && !loading && (
+      {!info && !loading && !error && (
         <div className="glass-card p-12 flex flex-col items-center gap-3 text-center">
           <Globe size={40} className="text-slate-600" />
           <p className="font-cyber text-sm text-slate-500">Enter an IP address and click Analyze</p>
-          <p className="text-xs text-slate-600 font-mono">Try: 8.8.8.8 · 1.1.1.1 · 185.220.101.5</p>
+          <p className="text-xs text-slate-600 font-mono">Real backend analysis</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="glass-card p-12 flex flex-col items-center gap-3 text-center border-red-500/20 bg-red-500/5">
+          <Globe size={40} className="text-red-400" />
+          <p className="font-cyber text-sm font-bold text-red-400">{error}</p>
         </div>
       )}
     </div>

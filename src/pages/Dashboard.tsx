@@ -25,13 +25,13 @@ const recentThreats = [
 ];
 
 const tools = [
-  { icon: <Network size={20} />, label: 'Port Scanner', path: '/tools/port-scanner', color: '#00f5ff' },
+
   { icon: <Globe size={20} />, label: 'IP Info', path: '/tools/ip-information', color: '#3b82f6' },
   { icon: <Link2 size={20} />, label: 'URL Safety', path: '/tools/url-safety', color: '#8b5cf6' },
   { icon: <Fish size={20} />, label: 'Phishing', path: '/tools/phishing-detector', color: '#f59e0b' },
   { icon: <Flame size={20} />, label: 'Firewall', path: '/tools/firewall', color: '#ef4444' },
   { icon: <Bug size={20} />, label: 'Malware', path: '/tools/malware-scanner', color: '#10b981' },
-  { icon: <Globe2 size={20} />, label: 'Web Scanner', path: '/tools/website-scanner', color: '#ec4899' },
+
 ];
 
 export function DashboardPage() {
@@ -179,7 +179,7 @@ export function DashboardPage() {
       {/* Security Tools Grid */}
       <div className="glass-card p-5">
         <h3 className="font-cyber text-sm font-bold text-white tracking-wide mb-4">Security Tools</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {tools.map(tool => (
             <button
               key={tool.path}

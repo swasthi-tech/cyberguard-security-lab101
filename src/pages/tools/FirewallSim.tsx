@@ -72,8 +72,8 @@ export function FirewallSimPage() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Firewall Simulator" icon={<Flame size={22} />} subtitle="Visual educational simulation of firewall rule processing and packet filtering" />
-      <SimBanner message="This is a purely visual simulation for education. No real network traffic is affected." />
+      <SectionHeader title="Firewall Simulator" icon={<Flame size={22} />} subtitle="EDUCATIONAL FIREWALL SIMULATOR - Visual rule processing" />
+      <SimBanner message="EDUCATIONAL SIMULATION. No real network traffic is affected." />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

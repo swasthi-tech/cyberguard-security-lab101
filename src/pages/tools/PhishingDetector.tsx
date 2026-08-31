@@ -15,49 +15,11 @@ const INDICATORS = [
   { key: 'externalLinkIndicators', label: 'External Link Pattern', desc: 'Excessive external resource loading' },
 ];
 
-function analyzePhishing(url: string): { probability: number; verdict: PhishingVerdict; indicators: { key: string; detected: boolean; severity: 'LOW' | 'MEDIUM' | 'HIGH' }[] } {
-  const lower = url.toLowerCase();
-  const domain = lower.split('/')[2] || '';
-
-  const checks: Record<string, boolean> = {
-    domainSimilarity: /(paypa1|g00gle|micros0ft|amazonn|appleid-verify|faceb00k)/.test(domain),
-    httpsStatus: !lower.startsWith('https://'),
-    suspiciousKeywords: /(verify|secure|update|login|signin|account|bank|credential)/.test(lower) && !/(google|microsoft|apple|amazon)\.com/.test(domain),
-    loginPageIndicators: /(login|signin|auth|verify|password|credential)/.test(lower),
-    redirectIndicators: lower.includes('redirect') || lower.includes('url=http'),
-    domainReputation: /(\.xyz|\.tk|\.gq|\.ml|\.cf|\.ga)$/.test(domain) || /(\d{1,3}\.){3}\d{1,3}/.test(domain),
-    externalLinkIndicators: (url.match(/\//g) || []).length > 6,
-  };
-
-  const detected = Object.values(checks).filter(Boolean).length;
-  let probability = Math.round((detected / 7) * 100);
-  if (/(google|github|microsoft|cloudflare)\.com/.test(domain)) probability = Math.max(0, probability - 30);
-  probability = Math.min(100, probability);
-
-  let verdict: PhishingVerdict = 'LOW RISK';
-  if (probability >= 60) verdict = 'HIGH RISK';
-  else if (probability >= 30) verdict = 'MEDIUM RISK';
-
-  const severityMap: Record<string, 'LOW' | 'MEDIUM' | 'HIGH'> = {
-    domainSimilarity: 'HIGH',
-    httpsStatus: 'MEDIUM',
-    suspiciousKeywords: 'MEDIUM',
-    loginPageIndicators: 'HIGH',
-    redirectIndicators: 'MEDIUM',
-    domainReputation: 'HIGH',
-    externalLinkIndicators: 'LOW',
-  };
-
-  return {
-    probability,
-    verdict,
-    indicators: INDICATORS.map(ind => ({
-      key: ind.key,
-      detected: checks[ind.key],
-      severity: severityMap[ind.key],
-    })),
-  };
-}
+type PhishingResult = {
+  probability: number;
+  verdict: PhishingVerdict;
+  indicators: { key: string; detected: boolean; severity: 'LOW' | 'MEDIUM' | 'HIGH' }[];
+};
 
 const VERDICT_CONFIG: Record<PhishingVerdict, { color: string; bg: string; border: string }> = {
   'LOW RISK': { color: '#10b981', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
@@ -67,15 +29,40 @@ const VERDICT_CONFIG: Record<PhishingVerdict, { color: string; bg: string; borde
 
 export function PhishingDetectorPage() {
   const [url, setUrl] = useState('');
-  const [result, setResult] = useState<ReturnType<typeof analyzePhishing> | null>(null);
+  const [result, setResult] = useState<PhishingResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const analyze = async () => {
     if (!url) return;
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1300));
-    setResult(analyzePhishing(url));
-    setLoading(false);
+    setError(null);
+    setResult(null);
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      const res = await fetch(`${baseUrl}/api/phishing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) throw new Error('API Error');
+      const data = await res.json();
+      
+      const probability = data.probability * 100;
+      setResult({
+        probability,
+        verdict: probability > 50 ? 'HIGH RISK' as PhishingVerdict : 'LOW RISK' as PhishingVerdict,
+        indicators: INDICATORS.map(ind => ({
+          key: ind.key,
+          detected: false,
+          severity: 'LOW',
+        }))
+      });
+    } catch (err) {
+      setError('PHISHING ANALYSIS SERVICE OFFLINE');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cfg = result ? VERDICT_CONFIG[result.verdict] : null;
@@ -88,7 +75,7 @@ export function PhishingDetectorPage() {
   return (
     <div className="space-y-6 max-w-3xl">
       <SectionHeader title="Phishing Website Detector" icon={<Fish size={22} />} subtitle="Analyze websites for phishing indicators and social engineering patterns" />
-      <SimBanner message="Phishing analysis is simulated. Real detection requires ML models and threat-intel APIs." />
+      <SimBanner message="Connected to Real API. If backend is not running, it will show as Offline." />
 
       <div className="glass-card p-5">
         <div className="flex gap-3">
@@ -100,7 +87,7 @@ export function PhishingDetectorPage() {
             onKeyDown={e => e.key === 'Enter' && analyze()}
           />
           <Button variant="primary" onClick={analyze} loading={loading} disabled={!url} icon={<Search size={16} />}>
-            Analyze
+            {loading ? 'ANALYZING...' : 'Analyze'}
           </Button>
         </div>
         <p className="text-xs text-slate-600 font-mono mt-2">Try: http://paypa1-secure.xyz/verify-account</p>
@@ -154,10 +141,18 @@ export function PhishingDetectorPage() {
         </div>
       )}
 
-      {!result && !loading && (
+      {!result && !loading && !error && (
         <div className="glass-card p-12 flex flex-col items-center gap-3 text-center">
           <Fish size={40} className="text-slate-600" />
           <p className="font-cyber text-sm text-slate-500">Enter a website URL to check for phishing indicators</p>
+          <p className="text-xs text-slate-600 font-mono">Real backend analysis</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="glass-card p-12 flex flex-col items-center gap-3 text-center border-red-500/20 bg-red-500/5">
+          <Fish size={40} className="text-red-400" />
+          <p className="font-cyber text-sm font-bold text-red-400">{error}</p>
         </div>
       )}
     </div>

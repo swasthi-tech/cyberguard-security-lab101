@@ -20,13 +20,13 @@ import { SettingsPage } from './pages/Settings';
 import { HelpPage } from './pages/Help';
 
 // Tools
-import { PortScannerPage } from './pages/tools/PortScanner';
+
 import { IPInfoPage } from './pages/tools/IpInfo';
 import { URLSafetyPage } from './pages/tools/UrlSafety';
 import { PhishingDetectorPage } from './pages/tools/PhishingDetector';
 import { FirewallSimPage } from './pages/tools/FirewallSim';
 import { MalwareScannerPage } from './pages/tools/MalwareScanner';
-import { WebsiteScannerPage } from './pages/tools/WebsiteScanner';
+
 
 // Protected Route
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -56,13 +56,13 @@ function AppRoutes() {
         <Route path="help" element={<HelpPage />} />
 
         {/* Tools */}
-        <Route path="tools/port-scanner" element={<PortScannerPage />} />
+
         <Route path="tools/ip-information" element={<IPInfoPage />} />
         <Route path="tools/url-safety" element={<URLSafetyPage />} />
         <Route path="tools/phishing-detector" element={<PhishingDetectorPage />} />
         <Route path="tools/firewall" element={<FirewallSimPage />} />
         <Route path="tools/malware-scanner" element={<MalwareScannerPage />} />
-        <Route path="tools/website-scanner" element={<WebsiteScannerPage />} />
+
       </Route>
 
       {/* Fallback */}

@@ -20,13 +20,13 @@ const navItems: NavItem[] = [
   {
     label: 'Security Tools', icon: <Wrench size={18} />, path: '/tools',
     children: [
-      { label: 'Port Scanner', icon: <Network size={15} />, path: '/tools/port-scanner' },
+
       { label: 'IP Information', icon: <Globe size={15} />, path: '/tools/ip-information' },
       { label: 'URL Safety', icon: <Link2 size={15} />, path: '/tools/url-safety' },
       { label: 'Phishing Detector', icon: <Fish size={15} />, path: '/tools/phishing-detector' },
       { label: 'Firewall Sim', icon: <Flame size={15} />, path: '/tools/firewall' },
       { label: 'Malware Scanner', icon: <Bug size={15} />, path: '/tools/malware-scanner' },
-      { label: 'Website Scanner', icon: <Globe2 size={15} />, path: '/tools/website-scanner' },
+
     ],
   },
   { label: 'Scan History', icon: <History size={18} />, path: '/history' },
