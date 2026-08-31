@@ -9,6 +9,7 @@ import qrcode from 'qrcode';
 import { z } from 'zod';
 import { getDb } from './db.js';
 import { encrypt, decrypt, generateToken, requireAuth, verifyToken } from './auth.js';
+import { verifyCaptcha } from './captcha.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -44,11 +45,15 @@ const setCookie = (res: express.Response, token: string) => {
 // AUTH ROUTES
 // =====================================
 
-// Stub register
+// Register
 app.post('/api/auth/register', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, captchaToken } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
   
+  if (!(await verifyCaptcha(captchaToken))) {
+    return res.status(400).json({ error: 'Invalid CAPTCHA' });
+  }
+
   const db = await getDb();
   const existing = await db.get('SELECT id FROM users WHERE email = ?', [email]);
   if (existing) return res.status(400).json({ error: 'User exists' });
@@ -65,7 +70,12 @@ app.post('/api/auth/register', async (req, res) => {
 
 // Login
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, captchaToken } = req.body;
+  
+  if (!(await verifyCaptcha(captchaToken))) {
+    return res.status(400).json({ error: 'Invalid CAPTCHA' });
+  }
+
   const db = await getDb();
   
   const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
@@ -99,6 +109,53 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
   if (!dbUser) return res.status(404).json({ error: 'Not found' });
   
   res.json({ user: dbUser });
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email, captchaToken } = req.body;
+  if (!(await verifyCaptcha(captchaToken))) {
+    return res.status(400).json({ error: 'Invalid CAPTCHA' });
+  }
+
+  const db = await getDb();
+  const user = await db.get('SELECT id FROM users WHERE email = ?', [email]);
+  if (user) {
+    const token = crypto.randomBytes(32).toString('hex');
+    const hash = await bcrypt.hash(token, 10);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 15).toISOString(); // 15 mins
+    await db.run('UPDATE users SET resetTokenHash = ?, resetTokenExpiresAt = ? WHERE id = ?', [hash, expiresAt, user.id]);
+    
+    console.log('\n--- MOCK EMAIL ---');
+    console.log(`To: ${email}`);
+    console.log(`Subject: Password Reset Request`);
+    console.log(`Body: Click here to reset your password: http://localhost:5173/reset-password?token=${token}&email=${encodeURIComponent(email)}`);
+    console.log('------------------\n');
+  }
+  
+  // Generic response to avoid email enumeration
+  res.json({ success: true, message: 'If that email is registered, a password reset link has been sent.' });
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { email, token, newPassword } = req.body;
+  const db = await getDb();
+  const user = await db.get('SELECT id, resetTokenHash, resetTokenExpiresAt FROM users WHERE email = ?', [email]);
+  
+  if (!user || !user.resetTokenHash || !user.resetTokenExpiresAt) {
+    return res.status(400).json({ error: 'Invalid or expired token' });
+  }
+
+  if (new Date(user.resetTokenExpiresAt) < new Date()) {
+    return res.status(400).json({ error: 'Invalid or expired token' });
+  }
+
+  const isValid = await bcrypt.compare(token, user.resetTokenHash);
+  if (!isValid) return res.status(400).json({ error: 'Invalid or expired token' });
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await db.run('UPDATE users SET passwordHash = ?, resetTokenHash = NULL, resetTokenExpiresAt = NULL WHERE id = ?', [passwordHash, user.id]);
+
+  res.json({ success: true });
 });
 
 // =====================================

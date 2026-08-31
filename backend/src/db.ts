@@ -27,6 +27,8 @@ export async function initDB() {
       twoFactorEnabled INTEGER DEFAULT 0,
       encryptedTotpSecret TEXT,
       recoveryCodeHashes TEXT,
+      resetTokenHash TEXT,
+      resetTokenExpiresAt DATETIME,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       lastUsedAt DATETIME
