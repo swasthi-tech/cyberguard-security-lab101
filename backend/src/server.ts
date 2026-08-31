@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import { authenticator } from 'otplib';
 import qrcode from 'qrcode';
 import { z } from 'zod';
-import { getDb } from './db.js';
+import { getDb, initDB } from './db.js';
 import { encrypt, decrypt, generateToken, requireAuth, verifyToken } from './auth.js';
 import { verifyCaptcha } from './captcha.js';
 import crypto from 'crypto';
@@ -18,8 +18,22 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(helmet());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://swasthi-tech.github.io'
+];
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
 }));
@@ -35,8 +49,8 @@ authenticator.options = { window: 1 };
 const setCookie = (res: express.Response, token: string) => {
   res.cookie('session', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', // Must be lax/none if frontend and backend on different ports
+    secure: true, // Must be true for SameSite='none'
+    sameSite: 'none', // Required for cross-domain auth
     maxAge: 24 * 60 * 60 * 1000, // 1 day
   });
 };
@@ -47,51 +61,61 @@ const setCookie = (res: express.Response, token: string) => {
 
 // Register
 app.post('/api/auth/register', async (req, res) => {
-  const { email, password, captchaToken } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
-  
-  if (!(await verifyCaptcha(captchaToken))) {
-    return res.status(400).json({ error: 'Invalid CAPTCHA' });
+  try {
+    const { email, password, captchaToken } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
+    
+    if (!(await verifyCaptcha(captchaToken))) {
+      return res.status(400).json({ error: 'Invalid CAPTCHA' });
+    }
+
+    const db = await getDb();
+    const existing = await db.get('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing) return res.status(400).json({ error: 'User exists' });
+
+    const id = crypto.randomUUID();
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    await db.run('INSERT INTO users (id, email, passwordHash) VALUES (?, ?, ?)', [id, email, passwordHash]);
+    
+    const token = generateToken({ userId: id, _2faVerified: true }); // No 2FA on registration
+    setCookie(res, token);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Registration error:', error instanceof Error ? error.message : 'Unknown error');
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  const db = await getDb();
-  const existing = await db.get('SELECT id FROM users WHERE email = ?', [email]);
-  if (existing) return res.status(400).json({ error: 'User exists' });
-
-  const id = crypto.randomUUID();
-  const passwordHash = await bcrypt.hash(password, 10);
-  
-  await db.run('INSERT INTO users (id, email, passwordHash) VALUES (?, ?, ?)', [id, email, passwordHash]);
-  
-  const token = generateToken({ userId: id, _2faVerified: true }); // No 2FA on registration
-  setCookie(res, token);
-  res.json({ success: true });
 });
 
 // Login
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password, captchaToken } = req.body;
-  
-  if (!(await verifyCaptcha(captchaToken))) {
-    return res.status(400).json({ error: 'Invalid CAPTCHA' });
-  }
+  try {
+    const { email, password, captchaToken } = req.body;
+    
+    if (!(await verifyCaptcha(captchaToken))) {
+      return res.status(400).json({ error: 'Invalid CAPTCHA' });
+    }
 
-  const db = await getDb();
-  
-  const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
+    const db = await getDb();
+    
+    const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
-  if (user.twoFactorEnabled) {
-    const tempToken = generateToken({ userId: user.id, _2faVerified: false }, '15m');
-    setCookie(res, tempToken);
-    return res.json({ requires2FA: true });
-  }
+    if (user.twoFactorEnabled) {
+      const tempToken = generateToken({ userId: user.id, _2faVerified: false }, '15m');
+      setCookie(res, tempToken);
+      return res.json({ requires2FA: true });
+    }
 
-  const token = generateToken({ userId: user.id, _2faVerified: true });
-  setCookie(res, token);
-  res.json({ requires2FA: false });
+    const token = generateToken({ userId: user.id, _2faVerified: true });
+    setCookie(res, token);
+    res.json({ requires2FA: false });
+  } catch (error) {
+    console.error('Login error:', error instanceof Error ? error.message : 'Unknown error');
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Logout
@@ -283,6 +307,11 @@ app.post('/api/url-safety', (req, res) => res.json({ url: req.body.url, safe: tr
 app.post('/api/phishing', (req, res) => res.json({ url: req.body.url, probability: 0.1, isPhishing: false }));
 app.post('/api/malware', (req, res) => res.json({ hash: req.body.hash, clean: true, detections: [] }));
 
-app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
+initDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Backend running on port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('Failed to initialize database:', err instanceof Error ? err.message : err);
+  process.exit(1);
 });

@@ -11,6 +11,8 @@ import { LandingPage } from './pages/Landing';
 import { RegisterPage } from './pages/Register';
 import { LoginPage } from './pages/Login';
 import { TwoFAPage } from './pages/TwoFA';
+import { ForgotPasswordPage } from './pages/ForgotPassword';
+import { ResetPasswordPage } from './pages/ResetPassword';
 import { DashboardPage } from './pages/Dashboard';
 import { AnalyticsPage } from './pages/Analytics';
 import { HistoryPage } from './pages/History';
@@ -43,7 +45,8 @@ function AppRoutes() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/two-fa" element={<TwoFAPage />} />
-      <Route path="/forgot-password" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Protected Dashboard */}
       <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
