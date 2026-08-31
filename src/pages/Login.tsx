@@ -28,7 +28,7 @@ export function LoginPage() {
     const errs: typeof errors = {};
     if (!form.email) errs.email = 'Email or username required';
     if (!form.password) errs.password = 'Password required';
-    if (!captchaToken) errs.captcha = 'Please complete the CAPTCHA';
+    if (!captchaToken) errs.captcha = 'Please complete the security verification.';
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setLoading(true);

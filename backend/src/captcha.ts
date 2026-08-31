@@ -1,5 +1,5 @@
 export async function verifyCaptcha(token: string): Promise<boolean> {
-  const secretKey = process.env.TURNSTILE_SECRET || (process.env.NODE_ENV !== 'production' ? '1x0000000000000000000000000000000AA' : '');
+  const secretKey = process.env.TURNSTILE_SECRET;
   if (!secretKey) {
     console.error('TURNSTILE_SECRET is not set. CAPTCHA verification will fail.');
     return false;
