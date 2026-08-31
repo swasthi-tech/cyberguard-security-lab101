@@ -57,7 +57,7 @@ export function ProfilePage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Security Score" value={`${user.securityScore}%`} icon={<Star size={20} />} color="cyan" />
-        <StatCard label="2FA Status" value={user.twoFAEnabled ? 'ON' : 'OFF'} icon={<Smartphone size={20} />} color="green" />
+        <StatCard label="2FA Status" value={user.twoFactorEnabled ? 'ON' : 'OFF'} icon={<Smartphone size={20} />} color="green" />
         <StatCard label="Account ID" value={user.id} icon={<User size={20} />} color="blue" />
         <StatCard label="Member Since" value={user.createdAt} icon={<Clock size={20} />} color="purple" />
       </div>
@@ -66,7 +66,7 @@ export function ProfilePage() {
       <div className="glass-card p-5 space-y-4">
         <h3 className="font-cyber text-sm font-bold text-white tracking-wide">Security Status</h3>
         {[
-          { label: 'Two-Factor Authentication', value: user.twoFAEnabled ? 'Enabled' : 'Disabled', ok: user.twoFAEnabled },
+          { label: 'Two-Factor Authentication', value: user.twoFactorEnabled ? 'Enabled' : 'Disabled', ok: user.twoFactorEnabled },
           { label: 'Last Login', value: new Date(user.lastLogin).toLocaleString(), ok: true },
           { label: 'Account Verification', value: 'Verified', ok: true },
           { label: 'Active Sessions', value: '1 session', ok: true },

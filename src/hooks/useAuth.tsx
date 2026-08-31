@@ -1,13 +1,15 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User, AuthState } from '../types';
+import { fetchAuthApi } from '../lib/api';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   register: (data: RegisterData) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   verifyTwoFA: (code: string) => Promise<boolean>;
   updateUser: (user: Partial<User>) => void;
+  checkSession: () => Promise<void>;
 }
 
 interface RegisterData {
@@ -19,72 +21,101 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Demo user for simulation
-const DEMO_USER: User = {
-  id: 'usr-001',
-  fullName: 'Alex Carter',
-  username: 'alexcarter',
-  email: 'alex@cyberguard.lab',
-  createdAt: '2026-01-15',
-  lastLogin: '2026-08-30T20:30:00Z',
-  twoFAEnabled: true,
-  securityScore: 94,
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [auth, setAuth] = useState<AuthState>(() => {
-    const stored = sessionStorage.getItem('cyberguard_auth');
-    if (stored) {
-      try { return JSON.parse(stored); }
-      catch { return { isAuthenticated: false, user: null, needsTwoFA: false }; }
+  const [auth, setAuth] = useState<AuthState>({ isAuthenticated: false, user: null, needsTwoFA: false });
+  const [loading, setLoading] = useState(true);
+
+  const checkSession = async () => {
+    try {
+      const res = await fetchAuthApi('/api/auth/me');
+      if (res.ok) {
+        const { user } = await res.json();
+        setAuth({ isAuthenticated: true, user, needsTwoFA: false });
+      } else {
+        setAuth({ isAuthenticated: false, user: null, needsTwoFA: false });
+      }
+    } catch (e) {
+      setAuth({ isAuthenticated: false, user: null, needsTwoFA: false });
+    } finally {
+      setLoading(false);
     }
-    return { isAuthenticated: false, user: null, needsTwoFA: false };
-  });
-
-  const saveAuth = (state: AuthState) => {
-    setAuth(state);
-    sessionStorage.setItem('cyberguard_auth', JSON.stringify(state));
   };
 
-  const login = async (email: string, _password: string): Promise<boolean> => {
-    // DEMO: Accept any credentials with a simulated delay
-    await new Promise(r => setTimeout(r, 1200));
-    if (!email) return false;
-    saveAuth({ isAuthenticated: false, user: DEMO_USER, needsTwoFA: true });
-    return true;
+  useEffect(() => {
+    checkSession();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const res = await fetchAuthApi('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.requires2FA) {
+          setAuth({ isAuthenticated: false, user: null, needsTwoFA: true });
+          return true;
+        } else {
+          await checkSession();
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
   };
 
-  const register = async (_data: RegisterData): Promise<boolean> => {
-    await new Promise(r => setTimeout(r, 1500));
-    saveAuth({ isAuthenticated: false, user: DEMO_USER, needsTwoFA: true });
-    return true;
+  const register = async (data: RegisterData): Promise<boolean> => {
+    try {
+      const res = await fetchAuthApi('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        await checkSession();
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
   };
 
   const verifyTwoFA = async (code: string): Promise<boolean> => {
-    await new Promise(r => setTimeout(r, 800));
-    // DEMO: Accept any 6-digit code
-    if (code.length === 6) {
-      saveAuth({ isAuthenticated: true, user: auth.user, needsTwoFA: false });
-      return true;
+    try {
+      const res = await fetchAuthApi('/api/2fa/verify-login', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      });
+      if (res.ok) {
+        await checkSession();
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
-    return false;
   };
 
-  const logout = () => {
-    saveAuth({ isAuthenticated: false, user: null, needsTwoFA: false });
-    sessionStorage.removeItem('cyberguard_auth');
+  const logout = async () => {
+    try {
+      await fetchAuthApi('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
+    setAuth({ isAuthenticated: false, user: null, needsTwoFA: false });
   };
 
   const updateUser = (data: Partial<User>) => {
     if (auth.user) {
       const updated = { ...auth.user, ...data };
-      saveAuth({ ...auth, user: updated });
+      setAuth({ ...auth, user: updated });
     }
   };
 
   return (
-    <AuthContext.Provider value={{ ...auth, login, register, logout, verifyTwoFA, updateUser }}>
-      {children}
+    <AuthContext.Provider value={{ ...auth, login, register, logout, verifyTwoFA, updateUser, checkSession }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 }

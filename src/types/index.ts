@@ -8,7 +8,7 @@ export interface User {
   avatar?: string;
   createdAt: string;
   lastLogin: string;
-  twoFAEnabled: boolean;
+  twoFactorEnabled: boolean;
   securityScore: number;
 }
 
