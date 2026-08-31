@@ -4,7 +4,7 @@ import type { User, AuthState } from '../types';
 import { fetchAuthApi } from '../lib/api';
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string, captchaToken?: string) => Promise<boolean>;
+  login: (email: string, password: string, captchaId?: string, captchaAnswer?: string) => Promise<boolean>;
   register: (data: RegisterData) => Promise<boolean>;
   logout: () => Promise<void>;
   verifyTwoFA: (code: string) => Promise<boolean>;
@@ -17,7 +17,8 @@ interface RegisterData {
   username: string;
   email: string;
   password: string;
-  captchaToken?: string;
+  captchaId?: string;
+  captchaAnswer?: string;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -46,11 +47,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkSession();
   }, []);
 
-  const login = async (email: string, password: string, captchaToken?: string): Promise<boolean> => {
+  const login = async (email: string, password: string, captchaId?: string, captchaAnswer?: string): Promise<boolean> => {
     try {
       const res = await fetchAuthApi('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password, captchaToken }),
+        body: JSON.stringify({ email, password, captchaId, captchaAnswer }),
       });
       if (res.ok) {
         const data = await res.json();

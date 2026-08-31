@@ -13,7 +13,8 @@ export function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPw, setShowPw] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [captchaId, setCaptchaId] = useState<string>('');
+  const [captchaAnswer, setCaptchaAnswer] = useState<string>('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; captcha?: string }>({});
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'error' | 'success'; msg: string } | null>(null);
@@ -28,12 +29,12 @@ export function LoginPage() {
     const errs: typeof errors = {};
     if (!form.email) errs.email = 'Email or username required';
     if (!form.password) errs.password = 'Password required';
-    if (!captchaToken) errs.captcha = 'Please complete the security verification.';
+    if (!captchaId || !captchaAnswer) errs.captcha = 'Please complete the CAPTCHA.';
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setLoading(true);
     try {
-      const ok = await login(form.email, form.password, captchaToken);
+      const ok = await login(form.email, form.password, captchaId, captchaAnswer);
       if (ok) navigate('/two-fa');
       else setAlert({ type: 'error', msg: 'Invalid credentials. Please try again.' });
     } catch {
@@ -115,7 +116,10 @@ export function LoginPage() {
 
             {/* CAPTCHA */}
             <div className="pt-2 border-t border-slate-700/50">
-              <CaptchaWidget onValidChange={(valid, token) => setCaptchaToken(valid && token ? token : '')} />
+              <CaptchaWidget onValidChange={(valid, id, answer) => {
+                setCaptchaId(id || '');
+                setCaptchaAnswer(answer || '');
+              }} />
               {errors.captcha && <p className="mt-1.5 text-xs text-red-400 font-mono">{errors.captcha}</p>}
             </div>
 

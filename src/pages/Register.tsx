@@ -20,7 +20,8 @@ export function RegisterPage() {
   });
   const [showPw, setShowPw] = useState(false);
   const [showCpw, setShowCpw] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [captchaId, setCaptchaId] = useState<string>('');
+  const [captchaAnswer, setCaptchaAnswer] = useState<string>('');
   const [errors, setErrors] = useState<Partial<typeof form & { captcha: string }>>({});
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -37,7 +38,7 @@ export function RegisterPage() {
     if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Valid email required';
     if (!form.password || form.password.length < 8) errs.password = 'Password must be at least 8 characters';
     if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match';
-    if (!captchaToken) errs.captcha = 'Please complete the CAPTCHA';
+    if (!captchaId || !captchaAnswer) errs.captcha = 'Please complete the CAPTCHA.';
     return errs;
   };
 
@@ -47,7 +48,7 @@ export function RegisterPage() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
     try {
-      await register({ ...form, captchaToken });
+      await register({ ...form, captchaId, captchaAnswer });
       navigate('/two-fa');
     } catch {
       setAlert({ type: 'error', msg: 'Registration failed. Please try again.' });
@@ -176,7 +177,10 @@ export function RegisterPage() {
 
             {/* CAPTCHA */}
             <div className="pt-2 border-t border-slate-700/50">
-              <CaptchaWidget onValidChange={(valid, token) => setCaptchaToken(valid && token ? token : '')} />
+              <CaptchaWidget onValidChange={(valid, id, answer) => {
+                setCaptchaId(id || '');
+                setCaptchaAnswer(answer || '');
+              }} />
               {errors.captcha && <p className="mt-1.5 text-xs text-red-400 font-mono">{errors.captcha}</p>}
             </div>
 

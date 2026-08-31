@@ -9,7 +9,8 @@ import { fetchAuthApi } from '../lib/api';
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
-  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [captchaId, setCaptchaId] = useState<string>('');
+  const [captchaAnswer, setCaptchaAnswer] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'error' | 'success'; msg: string } | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -20,7 +21,7 @@ export function ForgotPasswordPage() {
       setAlert({ type: 'error', msg: 'Email is required' });
       return;
     }
-    if (!captchaToken) {
+    if (!captchaId || !captchaAnswer) {
       setAlert({ type: 'error', msg: 'Please complete the CAPTCHA' });
       return;
     }
@@ -30,7 +31,7 @@ export function ForgotPasswordPage() {
     try {
       const res = await fetchAuthApi('/api/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email, captchaToken }),
+        body: JSON.stringify({ email, captchaId, captchaAnswer }),
       });
       if (res.ok) {
         setSubmitted(true);
@@ -96,7 +97,10 @@ export function ForgotPasswordPage() {
               />
 
               <div className="pt-2 border-t border-slate-700/50">
-                <CaptchaWidget onValidChange={(valid, token) => setCaptchaToken(valid && token ? token : '')} />
+                <CaptchaWidget onValidChange={(valid, id, answer) => {
+                  setCaptchaId(id || '');
+                  setCaptchaAnswer(answer || '');
+                }} />
               </div>
 
               <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full">
