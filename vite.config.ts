@@ -8,6 +8,7 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
+  base: '/cyberguard-security-lab101/',
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

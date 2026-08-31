@@ -74,7 +74,7 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/cyberguard-security-lab101">
         <AppRoutes />
         <Toaster
           position="top-right"
