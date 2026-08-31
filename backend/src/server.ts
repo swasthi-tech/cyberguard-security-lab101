@@ -62,7 +62,8 @@ const setCookie = (res: express.Response, token: string) => {
 // Register
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { email, password, captchaToken } = req.body;
+    let { email, password, captchaToken } = req.body;
+    if (email) email = email.trim().toLowerCase();
     if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
     
     if (!(await verifyCaptcha(captchaToken))) {
@@ -90,7 +91,8 @@ app.post('/api/auth/register', async (req, res) => {
 // Login
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password, captchaToken } = req.body;
+    let { email, password, captchaToken } = req.body;
+    if (email) email = email.trim().toLowerCase();
     
     if (!(await verifyCaptcha(captchaToken))) {
       return res.status(400).json({ error: 'Invalid CAPTCHA' });
@@ -136,7 +138,8 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
 });
 
 app.post('/api/auth/forgot-password', async (req, res) => {
-  const { email, captchaToken } = req.body;
+  let { email, captchaToken } = req.body;
+  if (email) email = email.trim().toLowerCase();
   if (!(await verifyCaptcha(captchaToken))) {
     return res.status(400).json({ error: 'Invalid CAPTCHA' });
   }
@@ -161,7 +164,8 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 });
 
 app.post('/api/auth/reset-password', async (req, res) => {
-  const { email, token, newPassword } = req.body;
+  let { email, token, newPassword } = req.body;
+  if (email) email = email.trim().toLowerCase();
   const db = await getDb();
   const user = await db.get('SELECT id, resetTokenHash, resetTokenExpiresAt FROM users WHERE email = ?', [email]);
   
