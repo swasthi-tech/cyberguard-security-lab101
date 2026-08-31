@@ -33,10 +33,5 @@ export async function initDB() {
       updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       lastUsedAt DATETIME
     );
-    CREATE TABLE IF NOT EXISTS captchas (
-      id TEXT PRIMARY KEY,
-      answerHash TEXT NOT NULL,
-      expiresAt DATETIME NOT NULL
-    );
   `);
 }
