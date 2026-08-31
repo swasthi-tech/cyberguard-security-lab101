@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Shield, User, Mail, Lock, Eye, EyeOff, AtSign } from 'lucide-react';
 import { Button, Input, Alert } from '../components/ui';
-import { CaptchaWidget } from '../components/auth/CaptchaWidget';
 import { PasswordStrengthMeter } from '../components/auth/PasswordStrengthMeter';
 import { CyberBackground } from '../components/security';
 import { useAuth } from '../hooks/useAuth';
@@ -20,9 +19,7 @@ export function RegisterPage() {
   });
   const [showPw, setShowPw] = useState(false);
   const [showCpw, setShowCpw] = useState(false);
-  const [captchaId, setCaptchaId] = useState<string>('');
-  const [captchaAnswer, setCaptchaAnswer] = useState<string>('');
-  const [errors, setErrors] = useState<Partial<typeof form & { captcha: string }>>({});
+  const [errors, setErrors] = useState<Partial<typeof form>>({});
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
@@ -38,7 +35,6 @@ export function RegisterPage() {
     if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Valid email required';
     if (!form.password || form.password.length < 8) errs.password = 'Password must be at least 8 characters';
     if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match';
-    if (!captchaId || !captchaAnswer) errs.captcha = 'Please complete the CAPTCHA.';
     return errs;
   };
 
@@ -48,7 +44,7 @@ export function RegisterPage() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
     try {
-      await register({ ...form, captchaId, captchaAnswer });
+      await register(form);
       navigate('/two-fa');
     } catch {
       setAlert({ type: 'error', msg: 'Registration failed. Please try again.' });
@@ -175,14 +171,7 @@ export function RegisterPage() {
               )}
             </div>
 
-            {/* CAPTCHA */}
-            <div className="pt-2 border-t border-slate-700/50">
-              <CaptchaWidget onValidChange={(valid, id, answer) => {
-                setCaptchaId(id || '');
-                setCaptchaAnswer(answer || '');
-              }} />
-              {errors.captcha && <p className="mt-1.5 text-xs text-red-400 font-mono">{errors.captcha}</p>}
-            </div>
+
 
             {/* 2FA Notice */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/15">

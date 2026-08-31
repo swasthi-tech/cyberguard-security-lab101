@@ -2,15 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Shield, Mail, ArrowLeft } from 'lucide-react';
 import { Button, Input, Alert } from '../components/ui';
-import { CaptchaWidget } from '../components/auth/CaptchaWidget';
 import { CyberBackground } from '../components/security';
 import { fetchAuthApi } from '../lib/api';
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
-  const [captchaId, setCaptchaId] = useState<string>('');
-  const [captchaAnswer, setCaptchaAnswer] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'error' | 'success'; msg: string } | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -21,17 +18,14 @@ export function ForgotPasswordPage() {
       setAlert({ type: 'error', msg: 'Email is required' });
       return;
     }
-    if (!captchaId || !captchaAnswer) {
-      setAlert({ type: 'error', msg: 'Please complete the CAPTCHA' });
-      return;
-    }
+
 
     setLoading(true);
     setAlert(null);
     try {
       const res = await fetchAuthApi('/api/auth/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email, captchaId, captchaAnswer }),
+        body: JSON.stringify({ email }),
       });
       if (res.ok) {
         setSubmitted(true);
@@ -96,12 +90,7 @@ export function ForgotPasswordPage() {
                 required
               />
 
-              <div className="pt-2 border-t border-slate-700/50">
-                <CaptchaWidget onValidChange={(valid, id, answer) => {
-                  setCaptchaId(id || '');
-                  setCaptchaAnswer(answer || '');
-                }} />
-              </div>
+
 
               <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full">
                 {loading ? 'Sending...' : 'Send Reset Link'}

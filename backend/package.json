@@ -22,7 +22,6 @@
     "qrcode": "^1.5.3",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
-    "svg-captcha": "^1.4.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
