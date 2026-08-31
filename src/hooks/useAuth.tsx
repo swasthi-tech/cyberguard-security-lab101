@@ -6,6 +6,8 @@ import { fetchAuthApi } from '../lib/api';
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   register: (data: RegisterData) => Promise<boolean>;
+  sendEmailOTP: (email: string, purpose: string) => Promise<boolean>;
+  verifyEmailOTP: (email: string, otp: string, purpose: string) => Promise<boolean>;
   logout: () => Promise<void>;
   verifyTwoFA: (code: string) => Promise<boolean>;
   updateUser: (user: Partial<User>) => void;
@@ -19,6 +21,7 @@ interface RegisterData {
   password: string;
   captchaId?: string;
   captchaAnswer?: string;
+  otp?: string;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -64,6 +67,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const sendEmailOTP = async (email: string, purpose: string): Promise<boolean> => {
+    try {
+      const res = await fetchAuthApi('/api/auth/send-email-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email, purpose }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const verifyEmailOTP = async (email: string, otp: string, purpose: string): Promise<boolean> => {
+    try {
+      const res = await fetchAuthApi('/api/auth/verify-email-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email, otp, purpose }),
+      });
+      return res.ok;
     } catch {
       return false;
     }
@@ -116,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...auth, login, register, logout, verifyTwoFA, updateUser, checkSession }}>
+    <AuthContext.Provider value={{ ...auth, login, register, sendEmailOTP, verifyEmailOTP, logout, verifyTwoFA, updateUser, checkSession }}>
       {!loading && children}
     </AuthContext.Provider>
   );

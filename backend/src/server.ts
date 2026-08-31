@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { getDb, initDB } from './db.js';
 import { encrypt, decrypt, generateToken, requireAuth, verifyToken } from './auth.js';
 import { generateCaptcha, verifyCaptcha } from './captcha.js';
+import { generateAndSendOTP, verifyOTP, hasVerifiedOTP } from './otp.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -72,18 +73,84 @@ app.post('/api/captcha/generate', captchaLimiter, async (req, res) => {
 });
 
 // =====================================
+// OTP ROUTES
+// =====================================
+
+const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 }); // 5 OTPs per 15 min
+
+app.post('/api/auth/send-email-otp', otpLimiter, async (req, res) => {
+  try {
+    let { email, purpose } = req.body;
+    if (email) email = email.trim().toLowerCase();
+    
+    if (!email || !purpose) {
+      return res.status(400).json({ error: 'Email and purpose are required' });
+    }
+
+    // Basic anti-spam: check if they already requested one in the last 60 seconds
+    const db = await getDb();
+    const recent = await db.get(
+      "SELECT id FROM otps WHERE email = ? AND purpose = ? AND datetime(createdAt) > datetime('now', '-1 minute')",
+      [email, purpose]
+    );
+
+    if (recent) {
+      return res.status(429).json({ error: 'Please wait 60 seconds before requesting another code.' });
+    }
+
+    await generateAndSendOTP(email, purpose);
+    res.json({ success: true, message: 'OTP sent' });
+  } catch (error: any) {
+    console.error('OTP generation error:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+app.post('/api/auth/verify-email-otp', async (req, res) => {
+  try {
+    let { email, otp, purpose } = req.body;
+    if (email) email = email.trim().toLowerCase();
+
+    if (!email || !otp || !purpose) {
+      return res.status(400).json({ error: 'Email, OTP, and purpose are required' });
+    }
+
+    const isValid = await verifyOTP(email, otp, purpose);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid or expired OTP' });
+    }
+
+    res.json({ success: true, message: 'Email verified' });
+  } catch (error) {
+    console.error('OTP verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// =====================================
 // AUTH ROUTES
 // =====================================
 
 // Register
 app.post('/api/auth/register', async (req, res) => {
   try {
-    let { email, password, captchaId, captchaAnswer } = req.body;
+    let { email, password, captchaId, captchaAnswer, otp } = req.body;
     if (email) email = email.trim().toLowerCase();
-    if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
+    if (!email || !password || !otp) return res.status(400).json({ error: 'Missing fields' });
 
+    // Validate CAPTCHA first
     if (!(await verifyCaptcha(captchaId, captchaAnswer))) {
       return res.status(400).json({ error: 'Invalid CAPTCHA' });
+    }
+
+    // Verify OTP inline to ensure atomic registration
+    const isOtpValid = await verifyOTP(email, otp, 'registration');
+    if (!isOtpValid) {
+      // It might have already been verified in a previous step, check if they have a recently verified one
+      const alreadyVerified = await hasVerifiedOTP(email, 'registration');
+      if (!alreadyVerified) {
+        return res.status(400).json({ error: 'Invalid, expired, or unverified OTP' });
+      }
     }
 
     const db = await getDb();

@@ -38,5 +38,15 @@ export async function initDB() {
       answerHash TEXT NOT NULL,
       expiresAt DATETIME NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS otps (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      purpose TEXT NOT NULL,
+      otpHash TEXT NOT NULL,
+      expiresAt DATETIME NOT NULL,
+      attempts INTEGER DEFAULT 0,
+      verifiedAt DATETIME,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 }
