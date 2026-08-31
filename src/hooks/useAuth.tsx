@@ -17,6 +17,8 @@ interface RegisterData {
   username: string;
   email: string;
   password: string;
+  captchaId?: string;
+  captchaAnswer?: string;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);

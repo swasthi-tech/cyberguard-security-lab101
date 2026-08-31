@@ -9,6 +9,7 @@ import qrcode from 'qrcode';
 import { z } from 'zod';
 import { getDb, initDB } from './db.js';
 import { encrypt, decrypt, generateToken, requireAuth, verifyToken } from './auth.js';
+import { generateCaptcha, verifyCaptcha } from './captcha.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -55,15 +56,35 @@ const setCookie = (res: express.Response, token: string) => {
 };
 
 // =====================================
+// CAPTCHA ROUTES
+// =====================================
+
+const captchaLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50 }); // 50 captchas per 15 min
+
+app.post('/api/captcha/generate', captchaLimiter, async (req, res) => {
+  try {
+    const data = await generateCaptcha();
+    res.json(data);
+  } catch (error) {
+    console.error('CAPTCHA generation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// =====================================
 // AUTH ROUTES
 // =====================================
 
 // Register
 app.post('/api/auth/register', async (req, res) => {
   try {
-    let { email, password } = req.body;
+    let { email, password, captchaId, captchaAnswer } = req.body;
     if (email) email = email.trim().toLowerCase();
     if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
+
+    if (!(await verifyCaptcha(captchaId, captchaAnswer))) {
+      return res.status(400).json({ error: 'Invalid CAPTCHA' });
+    }
 
     const db = await getDb();
     const existing = await db.get('SELECT id FROM users WHERE email = ?', [email]);
