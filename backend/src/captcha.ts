@@ -1,8 +1,8 @@
 export async function verifyCaptcha(token: string): Promise<boolean> {
-  const secretKey = process.env.CAPTCHA_SECRET_KEY;
+  const secretKey = process.env.TURNSTILE_SECRET;
   if (!secretKey) {
-    console.warn('CAPTCHA_SECRET_KEY is not set. Bypassing CAPTCHA verification for development.');
-    return true; // Bypass if no key is configured
+    console.error('TURNSTILE_SECRET is not set. CAPTCHA verification will fail.');
+    return false;
   }
   
   if (!token) return false;

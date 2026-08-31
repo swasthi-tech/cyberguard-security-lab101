@@ -6,7 +6,7 @@ interface CaptchaWidgetProps {
 }
 
 export function CaptchaWidget({ onValidChange }: CaptchaWidgetProps) {
-  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'; // Cloudflare testing key
+  const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY; // Production Cloudflare key
 
   return (
     <div className="space-y-3">

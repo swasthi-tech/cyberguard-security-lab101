@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link2, Search, CheckCircle, XCircle } from 'lucide-react';
 import { Button, SimBanner, SectionHeader, Badge } from '../../components/ui';
+import { fetchApi } from '../../lib/api';
 import { SecurityGauge } from '../../components/security';
 type Verdict = 'SAFE' | 'CAUTION' | 'SUSPICIOUS' | 'DANGEROUS';
 
@@ -43,10 +44,8 @@ export function URLSafetyPage() {
     setError(null);
     setResult(null);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const res = await fetch(`${baseUrl}/api/url-safety`, {
+      const res = await fetchApi('/api/url-safety', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
       if (!res.ok) throw new Error('API Error');

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Globe, Search } from 'lucide-react';
 import { Button, SimBanner, SectionHeader } from '../../components/ui';
 import { SecurityGauge, GlobeVisualization } from '../../components/security';
+import { fetchApi } from '../../lib/api';
 
 
 export function IPInfoPage() {
@@ -17,8 +18,7 @@ export function IPInfoPage() {
     setError(null);
     setInfo(null);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const res = await fetch(`${baseUrl}/api/ip/${ipInput.trim()}`);
+      const res = await fetchApi(`/api/ip/${ipInput.trim()}`);
       if (!res.ok) {
         throw new Error('API Error');
       }

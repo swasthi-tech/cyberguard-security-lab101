@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Fish, Search, AlertTriangle } from 'lucide-react';
 import { Button, SimBanner, SectionHeader } from '../../components/ui';
+import { fetchApi } from '../../lib/api';
 import { SecurityGauge } from '../../components/security';
 
 type PhishingVerdict = 'LOW RISK' | 'MEDIUM RISK' | 'HIGH RISK';
@@ -39,10 +40,8 @@ export function PhishingDetectorPage() {
     setError(null);
     setResult(null);
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const res = await fetch(`${baseUrl}/api/phishing`, {
+      const res = await fetchApi('/api/phishing', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
       if (!res.ok) throw new Error('API Error');

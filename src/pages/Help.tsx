@@ -4,9 +4,9 @@ import { SectionHeader } from '../components/ui';
 
 const faqs = [
   { q: 'Are the scanning tools real?', a: 'No. All tools are educational simulations. No real network scanning, malware execution, or unauthorized operations are performed.' },
-  { q: 'Is my data stored?', a: 'All data is stored locally in your browser session. No data is sent to external servers in demo mode.' },
-  { q: 'Can I connect real APIs?', a: 'Yes! The codebase is structured so you can swap demo data with authorized backend APIs using environment variables.' },
-  { q: 'Is the 2FA real?', a: 'The 2FA flow is simulated for demonstration. Production would use a TOTP library (e.g., speakeasy) with a backend TOTP validation service.' },
+  { q: 'Is my data stored?', a: 'Your data is securely stored in a backend database with encrypted passwords.' },
+  { q: 'Can I connect real APIs?', a: 'Yes! The codebase is fully integrated with a real backend authentication API.' },
+  { q: 'Is the 2FA real?', a: 'Yes! The 2FA flow uses otplib to generate and verify TOTP codes.' },
   { q: 'What are the password requirements?', a: 'Minimum 8 characters, uppercase, lowercase, number, and a special character (!@#$%^&*...).' },
 ];
 
