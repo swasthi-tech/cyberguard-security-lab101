@@ -1,52 +1,20 @@
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { PrismaClient } from '@prisma/client';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = process.env.DATABASE_URL || path.join(__dirname, '..', 'cyberguard.db');
+const prisma = new PrismaClient();
 
-let dbInstance: Database | null = null;
-
-export async function getDb(): Promise<Database> {
-  if (dbInstance) return dbInstance;
-  dbInstance = await open({
-    filename: dbPath,
-    driver: sqlite3.Database
-  });
-  return dbInstance;
+export function getDb() {
+  return prisma;
 }
 
 export async function initDB() {
-  const db = await getDb();
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
-      passwordHash TEXT NOT NULL,
-      twoFactorEnabled INTEGER DEFAULT 0,
-      encryptedTotpSecret TEXT,
-      recoveryCodeHashes TEXT,
-      resetTokenHash TEXT,
-      resetTokenExpiresAt DATETIME,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-      lastUsedAt DATETIME
-    );
-    CREATE TABLE IF NOT EXISTS captchas (
-      id TEXT PRIMARY KEY,
-      answerHash TEXT NOT NULL,
-      expiresAt DATETIME NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS otps (
-      id TEXT PRIMARY KEY,
-      email TEXT NOT NULL,
-      purpose TEXT NOT NULL,
-      otpHash TEXT NOT NULL,
-      expiresAt DATETIME NOT NULL,
-      attempts INTEGER DEFAULT 0,
-      verifiedAt DATETIME,
-      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  // Prisma handles migrations, we just test connection here
+  try {
+    await prisma.$connect();
+    console.log('Successfully connected to the database via Prisma.');
+  } catch (err) {
+    console.error('Failed to connect to the database via Prisma:', err);
+    throw err;
+  }
 }
+
+export default prisma;
