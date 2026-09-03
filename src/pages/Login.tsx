@@ -32,9 +32,11 @@ export function LoginPage() {
     try {
       const ok = await login(form.email, form.password);
       if (ok) navigate('/two-fa');
-      else setAlert({ type: 'error', msg: 'Invalid credentials. Please try again.' });
+      else {
+        setAlert({ type: 'error', msg: 'Email or password is incorrect.' });
+      }
     } catch {
-      setAlert({ type: 'error', msg: 'Login failed. Please try again.' });
+      setAlert({ type: 'error', msg: 'Authentication service is currently unavailable. Please try again later.' });
     } finally {
       setLoading(false);
     }

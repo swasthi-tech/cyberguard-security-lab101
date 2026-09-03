@@ -14,14 +14,11 @@ interface AuthContextType extends AuthState {
   checkSession: () => Promise<void>;
 }
 
-interface RegisterData {
+export interface RegisterData {
   fullName: string;
   username: string;
   email: string;
   password: string;
-  captchaId?: string;
-  captchaAnswer?: string;
-  otp?: string;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);

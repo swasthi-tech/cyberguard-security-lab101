@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Shield, User, Mail, Lock, Eye, EyeOff, AtSign } from 'lucide-react';
 import { Button, Input, Alert } from '../components/ui';
-import { CaptchaWidget } from '../components/auth/CaptchaWidget';
-import type { CaptchaWidgetRef } from '../components/auth/CaptchaWidget';
 import { PasswordStrengthMeter } from '../components/auth/PasswordStrengthMeter';
 import { CyberBackground } from '../components/security';
 import { useAuth } from '../hooks/useAuth';
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const { register, sendEmailOTP } = useAuth();
+  const { register } = useAuth();
 
   const [form, setForm] = useState({
     fullName: '',
@@ -19,42 +17,9 @@ export function RegisterPage() {
     password: '',
     confirmPassword: '',
   });
-  const [step, setStep] = useState<'details' | 'otp'>('details');
-  const [otp, setOtp] = useState('');
-  const [countdown, setCountdown] = useState(60);
-  const [canResend, setCanResend] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [showCpw, setShowCpw] = useState(false);
-  const captchaRef = React.useRef<CaptchaWidgetRef>(null);
-  const [captchaId, setCaptchaId] = useState<string>('');
-  const [captchaAnswer, setCaptchaAnswer] = useState<string>('');
-  const [errors, setErrors] = useState<Partial<typeof form & { captcha: string; otp: string }>>({});
-  const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
-
-  React.useEffect(() => {
-    let timer: any;
-    if (step === 'otp' && countdown > 0) {
-      timer = setInterval(() => setCountdown((c) => c - 1), 1000);
-    } else if (countdown === 0) {
-      setCanResend(true);
-    }
-    return () => clearInterval(timer);
-  }, [step, countdown]);
-
-  const handleResendOTP = async () => {
-    setLoading(true);
-    setAlert(null);
-    const sent = await useAuth().sendEmailOTP(form.email, 'registration');
-    setLoading(false);
-    if (sent) {
-      setCountdown(60);
-      setCanResend(false);
-      setAlert({ type: 'success', msg: 'A new verification code has been sent.' });
-    } else {
-      setAlert({ type: 'error', msg: 'Failed to resend code. Please try again.' });
-    }
-  };
 
   const update = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
@@ -68,45 +33,24 @@ export function RegisterPage() {
     if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Valid email required';
     if (!form.password || form.password.length < 8) errs.password = 'Password must be at least 8 characters';
     if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match';
-    if (!captchaId || !captchaAnswer) errs.captcha = 'Please complete the CAPTCHA.';
     return errs;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step === 'details') {
-      const errs = validate();
-      if (Object.keys(errs).length) { setErrors(errs); return; }
-      setLoading(true);
-      setAlert(null);
-      
-      const sent = await sendEmailOTP(form.email, 'registration');
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    
+    setLoading(true);
+    setAlert(null);
+    
+    try {
+      await register(form);
+      navigate('/two-fa');
+    } catch (err: any) {
+      setAlert({ type: 'error', msg: err.message || 'Registration failed. Please try again.' });
+    } finally {
       setLoading(false);
-      
-      if (sent) {
-        setStep('otp');
-        setCountdown(60);
-        setCanResend(false);
-        setAlert({ type: 'success', msg: `Verification code sent to ${form.email}` });
-      } else {
-        setAlert({ type: 'error', msg: 'Failed to send verification code. Please try again.' });
-      }
-    } else {
-      // OTP Step
-      if (otp.length !== 6) {
-        setErrors({ otp: 'Please enter the 6-digit code' });
-        return;
-      }
-      setLoading(true);
-      setAlert(null);
-      try {
-        await register({ ...form, captchaId, captchaAnswer, otp });
-        navigate('/two-fa');
-      } catch (err: any) {
-        setAlert({ type: 'error', msg: err.message || 'Verification failed. Please check the code and try again.' });
-      } finally {
-        setLoading(false);
-      }
     }
   };
 
@@ -139,8 +83,6 @@ export function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             
-            {step === 'details' && (
-              <>
             {/* Full Name */}
             <Input
               id="fullName"
@@ -231,19 +173,6 @@ export function RegisterPage() {
               )}
             </div>
 
-            {/* CAPTCHA */}
-            <div className="pt-2 border-t border-slate-700/50">
-              <CaptchaWidget 
-                ref={captchaRef}
-                onValidChange={(valid, id, answer) => {
-                  setCaptchaId(id || '');
-                  setCaptchaAnswer(answer || '');
-                  setErrors(prev => ({ ...prev, captcha: '' }));
-                }} 
-                error={errors.captcha}
-              />
-            </div>
-
             {/* 2FA Notice */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/15">
               <Shield size={20} className="text-cyan-400 mt-0.5 shrink-0" />
@@ -251,64 +180,10 @@ export function RegisterPage() {
                 You will be prompted to set up mandatory Two-Factor Authentication on the next screen.
               </p>
             </div>
-            </>
-            )}
-
-            {step === 'otp' && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <Mail size={48} className="mx-auto text-cyan-400 mb-4 opacity-80" />
-                  <h3 className="text-xl font-cyber text-white mb-2">VERIFY YOUR EMAIL</h3>
-                  <p className="text-slate-400 text-sm">
-                    Enter the 6-digit verification code sent to<br />
-                    <strong className="text-cyan-400">{form.email}</strong>
-                  </p>
-                </div>
-
-                <div className="pt-4">
-                  <Input
-                    id="otp"
-                    label="Verification Code"
-                    type="text"
-                    maxLength={6}
-                    placeholder="000000"
-                    value={otp}
-                    onChange={(e) => {
-                      setOtp(e.target.value.replace(/\D/g, ''));
-                      setErrors(prev => ({ ...prev, otp: '' }));
-                    }}
-                    error={errors.otp}
-                    className="text-center text-2xl tracking-[0.5em] font-mono h-14"
-                  />
-                </div>
-
-                <div className="flex justify-between items-center text-sm">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep('details');
-                      setOtp('');
-                      setAlert(null);
-                    }}
-                    className="text-slate-400 hover:text-white transition-colors"
-                  >
-                    Back to registration
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleResendOTP}
-                    disabled={!canResend || loading}
-                    className="text-cyan-400 hover:text-cyan-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                  >
-                    {canResend ? 'Resend Code' : `Resend in ${countdown}s`}
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Submit */}
             <Button type="submit" variant="primary" size="lg" loading={loading} className="w-full">
-              {step === 'details' ? 'Continue' : 'Verify & Create Account'}
+              Create Account
             </Button>
           </form>
 
