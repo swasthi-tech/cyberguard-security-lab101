@@ -16,10 +16,14 @@ export const CaptchaWidget = forwardRef<CaptchaWidgetRef, CaptchaWidgetProps>(({
   const [captchaImage, setCaptchaImage] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isValid, setIsValid] = useState(false);
+  const [localError, setLocalError] = useState('');
 
   const fetchCaptcha = async () => {
     setLoading(true);
     setAnswer('');
+    setIsValid(false);
+    setLocalError('');
     onValidChange(false);
     try {
       const res = await fetchApi('/api/captcha/generate', { method: 'POST' });
@@ -43,15 +47,38 @@ export const CaptchaWidget = forwardRef<CaptchaWidgetRef, CaptchaWidgetProps>(({
     fetchCaptcha();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setAnswer(val);
+    setIsValid(false);
+    setLocalError('');
+    
     if (val.length >= 5) {
-      onValidChange(true, captchaId, val);
+      try {
+        const res = await fetchApi('/api/captcha/verify', { 
+          method: 'POST', 
+          body: JSON.stringify({ id: captchaId, answer: val }) 
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.valid) {
+            setIsValid(true);
+            onValidChange(true, captchaId, val);
+          } else {
+            setLocalError('Incorrect CAPTCHA. Please try again.');
+            onValidChange(false);
+          }
+        }
+      } catch (err) {
+        setLocalError('Verification failed');
+        onValidChange(false);
+      }
     } else {
       onValidChange(false);
     }
   };
+
+  const displayError = localError || error;
 
   return (
     <div className="space-y-3">
@@ -83,13 +110,13 @@ export const CaptchaWidget = forwardRef<CaptchaWidgetRef, CaptchaWidgetProps>(({
             value={answer}
             onChange={handleChange}
             placeholder="Enter CAPTCHA"
-            className={`cyber-input w-full text-center tracking-[0.3em] font-mono text-lg uppercase ${error ? 'border-red-500/50 focus:border-red-500' : ''}`}
+            className={`cyber-input w-full text-center tracking-[0.3em] font-mono text-lg uppercase ${displayError ? 'border-red-500/50 focus:border-red-500' : ''}`}
             maxLength={6}
             autoComplete="off"
             spellCheck="false"
           />
-          {error && <p className="mt-1.5 text-xs text-red-400 font-mono text-center">{error}</p>}
-          {!error && answer.length >= 5 && <p className="mt-1.5 text-xs text-emerald-400 font-mono text-center">✓ CAPTCHA verified</p>}
+          {displayError && <p className="mt-1.5 text-xs text-red-400 font-mono text-center">✕ {displayError}</p>}
+          {isValid && <p className="mt-1.5 text-xs text-emerald-400 font-mono text-center">✓ CAPTCHA VERIFIED</p>}
         </div>
       </div>
     </div>

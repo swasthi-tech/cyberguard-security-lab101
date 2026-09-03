@@ -1,6 +1,22 @@
 import svgCaptcha from 'svg-captcha';
 import crypto from 'crypto';
-import { getDb } from './db.js';
+
+interface CaptchaRecord {
+  answerHash: string;
+  expiresAt: number;
+}
+
+const captchas = new Map<string, CaptchaRecord>();
+
+// Cleanup expired captchas every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, record] of captchas.entries()) {
+    if (record.expiresAt < now) {
+      captchas.delete(id);
+    }
+  }
+}, 5 * 60 * 1000);
 
 export async function generateCaptcha() {
   const captcha = svgCaptcha.create({
@@ -12,15 +28,12 @@ export async function generateCaptcha() {
   });
 
   const id = crypto.randomUUID();
-  // Using a secure hash (SHA-256) instead of bcrypt for speed since it's just a captcha
-  // We add a pepper/salt by combining the ID with the answer to prevent rainbow table attacks
   const answerHash = crypto.createHash('sha256').update(captcha.text.toLowerCase() + id).digest('hex');
   
-  // 5 minutes from now
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  // 5 minutes expiration
+  const expiresAt = Date.now() + 5 * 60 * 1000;
 
-  const db = await getDb();
-  await db.run('INSERT INTO captchas (id, answerHash, expiresAt) VALUES (?, ?, ?)', [id, answerHash, expiresAt]);
+  captchas.set(id, { answerHash, expiresAt });
 
   return {
     id,
@@ -28,27 +41,20 @@ export async function generateCaptcha() {
   };
 }
 
-export async function verifyCaptcha(id: string, answer: string): Promise<boolean> {
+export async function checkCaptcha(id: string, answer: string): Promise<boolean> {
   if (!id || !answer) return false;
 
   try {
-    const db = await getDb();
-    const record = await db.get('SELECT answerHash, expiresAt FROM captchas WHERE id = ?', [id]);
-    
+    const record = captchas.get(id);
     if (!record) return false;
 
-    // Delete it immediately so it can't be reused
-    await db.run('DELETE FROM captchas WHERE id = ?', [id]);
-
-    // Check expiration
-    if (new Date(record.expiresAt) < new Date()) {
+    if (record.expiresAt < Date.now()) {
+      captchas.delete(id);
       return false;
     }
 
-    // Verify hash
     const expectedHash = crypto.createHash('sha256').update(answer.trim().toLowerCase() + id).digest('hex');
     
-    // Secure timing-safe compare
     const a = Buffer.from(expectedHash);
     const b = Buffer.from(record.answerHash);
     
@@ -58,4 +64,13 @@ export async function verifyCaptcha(id: string, answer: string): Promise<boolean
     console.error('CAPTCHA verification error:', err);
     return false;
   }
+}
+
+export async function verifyCaptcha(id: string, answer: string): Promise<boolean> {
+  const isValid = await checkCaptcha(id, answer);
+  if (isValid) {
+    // Consume it immediately
+    captchas.delete(id);
+  }
+  return isValid;
 }

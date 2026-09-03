@@ -9,7 +9,7 @@ import qrcode from 'qrcode';
 import { z } from 'zod';
 import { getDb, initDB } from './db.js';
 import { encrypt, decrypt, generateToken, requireAuth, verifyToken } from './auth.js';
-import { generateCaptcha, verifyCaptcha } from './captcha.js';
+import { generateCaptcha, verifyCaptcha, checkCaptcha } from './captcha.js';
 import { generateAndSendOTP, verifyOTP, hasVerifiedOTP } from './otp.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
@@ -68,6 +68,17 @@ app.post('/api/captcha/generate', captchaLimiter, async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error('CAPTCHA generation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+const captchaVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }); 
+app.post('/api/captcha/verify', captchaVerifyLimiter, async (req, res) => {
+  try {
+    const { id, answer } = req.body;
+    const isValid = await checkCaptcha(id, answer);
+    res.json({ valid: isValid });
+  } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
