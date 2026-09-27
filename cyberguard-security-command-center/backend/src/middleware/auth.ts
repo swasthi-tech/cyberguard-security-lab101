@@ -15,6 +15,16 @@ export interface AuthenticatedUser {
   roles: string[];
 }
 
+declare global {
+  namespace Express {
+    interface Request {
+      user?: AuthenticatedUser;
+      sessionId?: string;
+      cookies: Record<string, any>;
+    }
+  }
+}
+
 export interface AuthenticatedRequest<
   P = ParamsDictionary,
   ResBody = any,
