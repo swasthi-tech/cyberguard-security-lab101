@@ -13,7 +13,7 @@ import {
 } from './types';
 
 const isProduction = import.meta.env.PROD;
-const DEFAULT_ONLINE_API = 'https://cyberguard-security-api.onrender.com';
+const DEFAULT_ONLINE_API = 'https://cyberguard-backend-q4vd.onrender.com';
 const envApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
 
 // Ensure localhost is NEVER used in the production build
