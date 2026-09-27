@@ -294,10 +294,11 @@ authRouter.post('/login', loginLimiter, validateBody(loginSchema), async (req: R
     details: { method: 'PASSWORD' },
   });
 
+  const isProd = ENV.NODE_ENV === 'production';
   res.cookie(ENV.COOKIE_NAME, rawToken, {
     httpOnly: true,
-    secure: ENV.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: ENV.SESSION_MAX_AGE_MS,
     path: '/',
   });
@@ -421,10 +422,11 @@ authRouter.post('/verify-2fa', twoFactorLimiter, validateBody(verify2FaSchema), 
     details: { usedRecoveryCode },
   });
 
+  const isProd2FA = ENV.NODE_ENV === 'production';
   res.cookie(ENV.COOKIE_NAME, rawToken, {
     httpOnly: true,
-    secure: ENV.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProd2FA,
+    sameSite: isProd2FA ? 'none' : 'lax',
     maxAge: ENV.SESSION_MAX_AGE_MS,
     path: '/',
   });
@@ -617,7 +619,13 @@ authRouter.post('/logout', authenticate, async (req: AuthenticatedRequest, res: 
     userAgent: req.headers['user-agent'] || 'Unknown',
   });
 
-  res.clearCookie(ENV.COOKIE_NAME);
+  const isProdLogout = ENV.NODE_ENV === 'production';
+  res.clearCookie(ENV.COOKIE_NAME, {
+    httpOnly: true,
+    secure: isProdLogout,
+    sameSite: isProdLogout ? 'none' : 'lax',
+    path: '/',
+  });
   res.json({ message: 'Signed out successfully.' });
 });
 

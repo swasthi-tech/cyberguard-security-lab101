@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
+import type { ParamsDictionary } from 'express-serve-static-core';
+import type { ParsedQs } from 'qs';
 import { prisma } from '../prisma.js';
 import { AuthService } from '../services/auth.service.js';
 import { ENV } from '../config/env.js';
@@ -13,9 +15,21 @@ export interface AuthenticatedUser {
   roles: string[];
 }
 
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest<
+  P = ParamsDictionary,
+  ResBody = any,
+  ReqBody = any,
+  ReqQuery = ParsedQs,
+  Locals extends Record<string, any> = Record<string, any>
+> extends Request<P, ResBody, ReqBody, ReqQuery, Locals> {
   user?: AuthenticatedUser;
   sessionId?: string;
+  body: ReqBody;
+  query: ReqQuery;
+  params: P;
+  headers: Request['headers'];
+  cookies: Record<string, any>;
+  ip: Request['ip'];
 }
 
 export async function authenticate(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {

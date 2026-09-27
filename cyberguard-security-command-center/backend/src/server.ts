@@ -39,8 +39,14 @@ app.use(
 );
 
 // Cross-Origin Resource Sharing with strict allowlist
+const configuredOrigins = (ENV.CORS_ORIGIN || '')
+  .split(',')
+  .map((s) => s.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
 const allowedOrigins = [
-  ENV.CORS_ORIGIN,
+  ...configuredOrigins,
+  'https://swasthi-tech.github.io',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:5174',
@@ -54,6 +60,7 @@ const corsOptions: cors.CorsOptions = {
     if (
       !origin ||
       allowedOrigins.includes(origin) ||
+      /^https:\/\/.*\.github\.io$/.test(origin) ||
       /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
     ) {
       callback(null, true);
@@ -103,7 +110,7 @@ app.use('/api/audit', auditRouter);
 app.use(errorHandler);
 
 const PORT = ENV.PORT;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`[CYBERGUARD SOC API] Listening securely on port ${PORT} [${ENV.NODE_ENV}]`);
   console.log(`[CORS ALLOWED] ${allowedOrigins.join(', ')}`);
 });

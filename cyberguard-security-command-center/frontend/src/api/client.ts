@@ -12,13 +12,25 @@ import {
   IocLookupResult,
 } from './types';
 
-const rawApiUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000') as string;
-export const API_BASE = rawApiUrl.replace(/\/$/, '');
+const isProduction = import.meta.env.PROD;
+const DEFAULT_ONLINE_API = 'https://cyberguard-security-api.onrender.com';
+const envApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+
+// Ensure localhost is NEVER used in the production build
+let rawApiUrl = envApiUrl;
+if (!rawApiUrl || (isProduction && (rawApiUrl.includes('localhost') || rawApiUrl.includes('127.0.0.1')))) {
+  rawApiUrl = isProduction ? DEFAULT_ONLINE_API : 'http://localhost:3000';
+}
+
+export const API_BASE = (rawApiUrl as string).replace(/\/$/, '');
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
+  
+  const savedToken = typeof localStorage !== 'undefined' ? localStorage.getItem('cyberguard_token') : null;
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    ...(savedToken ? { 'Authorization': `Bearer ${savedToken}` } : {}),
     ...(options.headers || {}),
   };
 
@@ -66,8 +78,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    login: (body: any) =>
-      request<{
+    login: async (body: any) => {
+      const res = await request<{
         message: string;
         token?: string;
         user?: User;
@@ -76,12 +88,22 @@ export const api = {
       }>('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify(body),
-      }),
-    verify2FA: (body: { tempToken: string; code: string }) =>
-      request<{ message: string; token: string; user: User }>('/api/auth/verify-2fa', {
+      });
+      if (res.token && typeof localStorage !== 'undefined') {
+        localStorage.setItem('cyberguard_token', res.token);
+      }
+      return res;
+    },
+    verify2FA: async (body: { tempToken: string; code: string }) => {
+      const res = await request<{ message: string; token: string; user: User }>('/api/auth/verify-2fa', {
         method: 'POST',
         body: JSON.stringify(body),
-      }),
+      });
+      if (res.token && typeof localStorage !== 'undefined') {
+        localStorage.setItem('cyberguard_token', res.token);
+      }
+      return res;
+    },
     setup2FA: () => request<Setup2FAResponse>('/api/auth/setup-2fa', { method: 'POST' }),
     confirm2FA: (code: string) =>
       request<{ message: string; twoFactorEnabled: boolean }>('/api/auth/confirm-2fa', {
@@ -93,7 +115,15 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ password }),
       }),
-    logout: () => request<{ message: string }>('/api/auth/logout', { method: 'POST' }),
+    logout: async () => {
+      try {
+        await request<{ message: string }>('/api/auth/logout', { method: 'POST' });
+      } finally {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('cyberguard_token');
+        }
+      }
+    },
     getMe: () => request<{ user: User }>('/api/auth/me'),
   },
 

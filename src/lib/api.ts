@@ -1,5 +1,11 @@
-const rawUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000') as string;
-const API_BASE_URL = rawUrl.replace(/\/$/, '');
+const isProduction = import.meta.env.PROD;
+const DEFAULT_ONLINE_API = 'https://cyberguard-security-api.onrender.com';
+const envApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+let rawUrl = envApiUrl;
+if (!rawUrl || (isProduction && (rawUrl.includes('localhost') || rawUrl.includes('127.0.0.1')))) {
+  rawUrl = isProduction ? DEFAULT_ONLINE_API : 'http://localhost:3000';
+}
+const API_BASE_URL = (rawUrl as string).replace(/\/$/, '');
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
