@@ -26,7 +26,7 @@ import { SettingsPage } from './pages/dashboard/SettingsPage';
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AuthProvider>
         <Routes>
           {/* Public Landing & Marketing */}
