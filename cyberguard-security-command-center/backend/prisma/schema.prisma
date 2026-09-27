@@ -1,0 +1,220 @@
+// Prisma Schema for CYBERGUARD Security Command Center
+// Default datasource is PostgreSQL, configurable via DATABASE_URL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  username          String             @unique
+  fullName          String
+  isEmailVerified   Boolean            @default(false)
+  emailVerifyToken  String?
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  passwordCredential PasswordCredential?
+  twoFactorSecret    TwoFactorSecret?
+  recoveryCodes      RecoveryCode[]
+  sessions           Session[]
+  userRoles          UserRole[]
+  loginEvents        LoginEvent[]
+  auditLogs          AuditLog[]
+}
+
+model PasswordCredential {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  passwordHash String
+  algorithm    String   @default("argon2id")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TwoFactorSecret {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  secretEncrypted String
+  iv              String
+  authTag         String
+  isEnabled       Boolean   @default(false)
+  confirmedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  codeHash  String
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  tokenHash    String   @unique
+  ipAddress    String?
+  userAgent    String?
+  deviceType   String?
+  location     String?
+  isActive     Boolean  @default(true)
+  expiresAt    DateTime
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LoginEvent {
+  id            String   @id @default(uuid())
+  userId        String?
+  email         String
+  ipAddress     String
+  userAgent     String
+  status        String   // SUCCESS, FAILED, CHALLENGED_2FA, BLOCKED
+  failureReason String?
+  createdAt     DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model SecurityEvent {
+  id          String   @id @default(uuid())
+  eventType   String
+  severity    String   // INFO, LOW, MEDIUM, HIGH, CRITICAL
+  source      String
+  description String
+  rawMetadata String?
+  status      String   @default("NEW") // NEW, ACKNOWLEDGED, RESOLVED
+  isSimulated Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorEmail String
+  action     String
+  entityType String
+  entityId   String?
+  ipAddress  String
+  userAgent  String
+  details    String?
+  timestamp  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g. "SOC_ANALYST", "SECURITY_ADMIN", "READONLY"
+  description String
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  userRoles   UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g. "edr:isolate", "iam:write", "logs:view"
+  module      String   // EDR, IAM, SIEM, CLOUD, THREAT_INTEL
+  description String
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model UserRole {
+  id         String   @id @default(uuid())
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  assignedBy String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+model ThreatIndicator {
+  id               String   @id @default(uuid())
+  type             String   // IP, DOMAIN, URL, HASH
+  value            String   @unique
+  threatCategory   String
+  confidenceScore  Int      // 0 - 100
+  reputationStatus String   // CLEAN, SUSPICIOUS, MALICIOUS, UNKNOWN
+  sourceFeed       String
+  firstSeen        DateTime @default(now())
+  lastSeen         DateTime @default(now())
+}
+
+model CloudAsset {
+  id               String   @id @default(uuid())
+  provider         String   // AWS, AZURE, GCP
+  assetType        String   // S3_BUCKET, VM_INSTANCE, IAM_ROLE, VPC
+  assetName        String
+  resourceId       String   @unique
+  region           String
+  complianceStatus String   // COMPLIANT, NON_COMPLIANT
+  encryptionStatus String   // ENCRYPTED, UNENCRYPTED
+  riskLevel        String   // LOW, MEDIUM, HIGH, CRITICAL
+  lastScanned      DateTime @default(now())
+}
+
+model Endpoint {
+  id                  String   @id @default(uuid())
+  hostname            String   @unique
+  ipAddress           String
+  os                  String   // Windows, Linux, macOS
+  osVersion           String
+  agentVersion        String
+  status              String   // PROTECTED, MONITORING, AT_RISK, CRITICAL, OFFLINE
+  riskScore           Int      // 0 - 100
+  lastSeenAt          DateTime @default(now())
+  criticalAlertsCount Int      @default(0)
+  isSimulated         Boolean  @default(false)
+}
+
+model Incident {
+  id             String   @id @default(uuid())
+  title          String
+  severity       String   // INFO, LOW, MEDIUM, HIGH, CRITICAL
+  status         String   // OPEN, INVESTIGATING, CONTAINED, RESOLVED, CLOSED
+  mitreTechnique String?  // e.g. "T1059 - Command and Scripting Interpreter"
+  summary        String
+  assignedTo     String?
+  detectedAt     DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  isSimulated    Boolean  @default(false)
+}

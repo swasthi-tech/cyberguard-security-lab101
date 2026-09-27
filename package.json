@@ -1,0 +1,10 @@
+{
+  "name": "cyberguard-command-center-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix cyberguard-security-command-center/frontend run dev",
+    "build": "npm --prefix cyberguard-security-command-center/frontend run build",
+    "preview": "npm --prefix cyberguard-security-command-center/frontend run preview"
+  }
+}
