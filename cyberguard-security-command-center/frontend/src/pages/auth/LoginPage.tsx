@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Shield, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
+import { Shield, Lock, Mail, AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { api } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { CaptchaChallenge } from '../../components/common/CaptchaChallenge';
@@ -18,10 +18,12 @@ export const LoginPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
 
     if (!identifier || !password) {
       setError('Identifier and password are required.');
@@ -44,17 +46,40 @@ export const LoginPage: React.FC = () => {
 
       // Check if 2FA is required
       if (res.require2FA && res.tempToken) {
+        setSuccess('Authentication successful! Awaiting Two-Factor verification...');
         setPending2FAToken(res.tempToken);
-        navigate('/verify-2fa', { state: { tempToken: res.tempToken, identifier } });
+        setTimeout(() => {
+          navigate('/verify-2fa', { state: { tempToken: res.tempToken, identifier } });
+        }, 800);
         return;
       }
 
       if (res.user) {
+        setSuccess('Login successful! Redirecting to SOC Command Center...');
         loginSuccess(res.user);
-        navigate('/dashboard');
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 800);
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please verify credentials and CAPTCHA.');
+      const msg = err.message || '';
+      if (
+        msg.includes('Unable to connect') ||
+        msg.includes('Failed to fetch') ||
+        msg.includes('NetworkError') ||
+        msg.includes('connection')
+      ) {
+        setError('Unable to connect to authentication server');
+      } else if (
+        msg.toLowerCase().includes('credential') ||
+        msg.toLowerCase().includes('password') ||
+        msg.toLowerCase().includes('invalid') ||
+        msg.toLowerCase().includes('incorrect')
+      ) {
+        setError('Invalid email or password');
+      } else {
+        setError(msg || 'Invalid email or password');
+      }
     } finally {
       setLoading(false);
     }
@@ -87,6 +112,13 @@ export const LoginPage: React.FC = () => {
           <div className="mb-4 p-3 rounded-lg bg-red-950/50 border border-red-500/40 text-red-300 text-xs font-mono flex items-start gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-4 p-3 rounded-lg bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs font-mono flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-400" />
+            <span>{success}</span>
           </div>
         )}
 

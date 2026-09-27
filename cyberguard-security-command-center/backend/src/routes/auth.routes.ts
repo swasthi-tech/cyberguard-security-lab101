@@ -206,7 +206,7 @@ authRouter.post('/login', loginLimiter, validateBody(loginSchema), async (req: R
       },
     });
 
-    res.status(401).json({ error: 'Invalid authentication credentials provided.' });
+    res.status(401).json({ error: 'Invalid email or password' });
     return;
   }
 
@@ -229,7 +229,7 @@ authRouter.post('/login', loginLimiter, validateBody(loginSchema), async (req: R
       },
     });
 
-    res.status(401).json({ error: 'Invalid authentication credentials provided.' });
+    res.status(401).json({ error: 'Invalid email or password' });
     return;
   }
 

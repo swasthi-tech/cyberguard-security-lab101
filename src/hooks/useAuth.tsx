@@ -48,25 +48,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      const res = await fetchAuthApi('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.requires2FA) {
-          setAuth({ isAuthenticated: false, user: null, needsTwoFA: true });
-          return true;
-        } else {
-          await checkSession();
-          return true;
-        }
+    const res = await fetchAuthApi('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.requires2FA) {
+        setAuth({ isAuthenticated: false, user: null, needsTwoFA: true });
+        return true;
+      } else {
+        await checkSession();
+        return true;
       }
-      return false;
-    } catch {
-      return false;
     }
+    return false;
   };
 
   const sendEmailOTP = async (email: string, purpose: string): Promise<boolean> => {

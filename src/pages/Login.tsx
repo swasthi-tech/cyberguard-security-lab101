@@ -31,12 +31,14 @@ export function LoginPage() {
     setLoading(true);
     try {
       const ok = await login(form.email, form.password);
-      if (ok) navigate('/two-fa');
-      else {
-        setAlert({ type: 'error', msg: 'Email or password is incorrect.' });
+      if (ok) {
+        setAlert({ type: 'success', msg: 'Login successful! Redirecting...' });
+        setTimeout(() => navigate('/two-fa'), 800);
+      } else {
+        setAlert({ type: 'error', msg: 'Invalid email or password' });
       }
     } catch {
-      setAlert({ type: 'error', msg: 'Authentication service is currently unavailable. Please try again later.' });
+      setAlert({ type: 'error', msg: 'Unable to connect to authentication server' });
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "npm --prefix cyberguard-security-command-center/frontend run dev",
+    "dev:frontend": "npm --prefix cyberguard-security-command-center/frontend run dev",
+    "dev:backend": "npm --prefix cyberguard-security-command-center/backend run dev",
     "build": "npm --prefix cyberguard-security-command-center/frontend run build",
     "preview": "npm --prefix cyberguard-security-command-center/frontend run preview"
   }

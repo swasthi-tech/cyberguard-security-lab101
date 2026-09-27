@@ -12,7 +12,8 @@ import {
   IocLookupResult,
 } from './types';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const rawApiUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000') as string;
+export const API_BASE = rawApiUrl.replace(/\/$/, '');
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
@@ -21,15 +22,30 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     ...(options.headers || {}),
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: 'include', // Ensures HttpOnly cookies are passed
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include', // Ensures HttpOnly cookies are passed
+    });
+  } catch (_err) {
+    throw new Error('Unable to connect to authentication server');
+  }
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      throw new Error('Unable to connect to authentication server');
+    }
+    if (response.status === 401) {
+      const serverMsg = data?.error || data?.message;
+      if (serverMsg && serverMsg.toLowerCase().includes('deactivated')) {
+        throw new Error(serverMsg);
+      }
+      throw new Error('Invalid email or password');
+    }
     const errorMsg = data?.error || data?.message || `Request failed with status ${response.status}`;
     throw new Error(errorMsg);
   }
